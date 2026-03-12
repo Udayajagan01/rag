@@ -1,0 +1,1283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RAG Complete Guide</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #050810;
+    --surface: #0c1120;
+    --surface2: #111827;
+    --border: #1e2d45;
+    --accent: #00d4ff;
+    --accent2: #7c3aed;
+    --accent3: #10b981;
+    --accent4: #f59e0b;
+    --accent5: #ef4444;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --glow: 0 0 20px rgba(0,212,255,0.15);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+  /* HEADER */
+  header {
+    padding: 60px 0 40px;
+    text-align: center;
+    position: relative;
+  }
+
+  .header-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent);
+    border: 1px solid rgba(0,212,255,0.3);
+    padding: 6px 16px;
+    border-radius: 100px;
+    margin-bottom: 24px;
+    background: rgba(0,212,255,0.05);
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(36px, 6vw, 72px);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -2px;
+    margin-bottom: 16px;
+  }
+
+  h1 span.hl { color: var(--accent); }
+  h1 span.hl2 { color: var(--accent2); }
+
+  .header-sub {
+    font-size: 14px;
+    color: var(--muted);
+    max-width: 500px;
+    margin: 0 auto 48px;
+    line-height: 1.7;
+  }
+
+  /* OVERVIEW PIPELINE */
+  .pipeline {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    flex-wrap: wrap;
+    margin-bottom: 64px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    gap: 4px;
+  }
+
+  .pipe-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    min-width: 90px;
+    text-align: center;
+    position: relative;
+  }
+
+  .pipe-step .icon { font-size: 24px; }
+  .pipe-step .label { font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+  .pipe-arrow { color: var(--accent); font-size: 20px; padding: 0 4px; }
+
+  /* CATEGORY TABS */
+  .tabs {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 32px;
+    justify-content: center;
+  }
+
+  .tab {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    padding: 8px 18px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.5px;
+  }
+  .tab:hover { border-color: var(--accent); color: var(--accent); }
+  .tab.active { background: rgba(0,212,255,0.1); border-color: var(--accent); color: var(--accent); }
+
+  /* CARDS GRID */
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 20px;
+    margin-bottom: 60px;
+  }
+
+  .rag-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+    display: none;
+  }
+
+  .rag-card.visible { display: block; animation: fadeIn 0.3s ease; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .rag-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--card-color, var(--accent));
+    opacity: 0.7;
+  }
+
+  .rag-card:hover {
+    border-color: var(--card-color, var(--accent));
+    box-shadow: 0 0 30px rgba(0,0,0,0.3), 0 0 0 1px var(--card-color, var(--accent)) inset;
+    transform: translateY(-2px);
+  }
+
+  .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+  .card-icon { font-size: 32px; }
+  .card-tag {
+    font-size: 10px;
+    padding: 4px 10px;
+    border-radius: 100px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border: 1px solid;
+  }
+
+  .card-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--text);
+  }
+
+  .card-subtitle {
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 14px;
+    letter-spacing: 0.5px;
+  }
+
+  .card-desc {
+    font-size: 12px;
+    line-height: 1.7;
+    color: #94a3b8;
+    margin-bottom: 20px;
+  }
+
+  /* EXPANDABLE DETAIL */
+  .card-detail { display: none; }
+  .rag-card.expanded .card-detail { display: block; }
+
+  .card-section-title {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--muted);
+    margin-bottom: 8px;
+    margin-top: 16px;
+  }
+
+  .use-cases { display: flex; flex-direction: column; gap: 6px; }
+  .use-case {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    background: var(--surface2);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 11px;
+    line-height: 1.5;
+    color: #94a3b8;
+  }
+  .use-case .uc-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+
+  .pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+  .pro, .con {
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 11px;
+    line-height: 1.4;
+  }
+  .pro { background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2); color: #6ee7b7; }
+  .con { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); color: #fca5a5; }
+
+  .code-block {
+    background: #030712;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 11px;
+    line-height: 1.6;
+    color: #7dd3fc;
+    margin-top: 8px;
+    white-space: pre;
+    overflow-x: auto;
+  }
+
+  .code-comment { color: #475569; }
+  .code-key { color: #a78bfa; }
+  .code-str { color: #86efac; }
+  .code-fn { color: #fbbf24; }
+
+  .expand-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--muted);
+    cursor: pointer;
+    margin-top: 4px;
+    transition: color 0.2s;
+  }
+  .expand-btn:hover { color: var(--accent); }
+  .expand-arrow { transition: transform 0.3s; display: inline-block; }
+  .rag-card.expanded .expand-arrow { transform: rotate(180deg); }
+
+  /* COMPARISON TABLE */
+  .comparison { margin-bottom: 60px; }
+  .section-header {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .section-header::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead tr { background: var(--surface2); }
+  th {
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(30,45,69,0.5);
+    vertical-align: top;
+    line-height: 1.5;
+    color: #94a3b8;
+  }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+  .td-name { color: var(--text); font-weight: 500; }
+
+  .badge {
+    display: inline-block;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+  }
+  .badge-low { background: rgba(16,185,129,0.1); color: #6ee7b7; }
+  .badge-med { background: rgba(245,158,11,0.1); color: #fcd34d; }
+  .badge-high { background: rgba(239,68,68,0.1); color: #fca5a5; }
+
+  /* WHEN TO USE */
+  .decision-tree { margin-bottom: 60px; }
+  .dt-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+  .dt-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .dt-question {
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 12px;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .dt-answer {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 6px;
+    padding: 6px 10px;
+    background: var(--surface2);
+    border-radius: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .dt-rec { font-size: 11px; color: var(--accent); }
+
+  /* FOOTER */
+  footer {
+    text-align: center;
+    padding: 40px 0;
+    font-size: 11px;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- HEADER -->
+  <header>
+    <div class="header-badge">// Complete Reference Guide</div>
+    <h1><span class="hl">RAG</span> Architectures<br><span class="hl2">Deep Dive</span></h1>
+    <p class="header-sub">Every type of Retrieval-Augmented Generation explained — with use cases, tradeoffs, and when to use each.</p>
+  </header>
+
+  <!-- PIPELINE OVERVIEW -->
+  <div class="pipeline">
+    <div class="pipe-step"><div class="icon">❓</div><div class="label">Query</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step"><div class="icon">🔍</div><div class="label">Retrieve</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step"><div class="icon">📄</div><div class="label">Context</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step"><div class="icon">🧠</div><div class="label">LLM</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step"><div class="icon">✅</div><div class="label">Answer</div></div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" onclick="filterCards('all')">All Types</button>
+    <button class="tab" onclick="filterCards('foundation')">Foundation</button>
+    <button class="tab" onclick="filterCards('query')">Query Strategy</button>
+    <button class="tab" onclick="filterCards('index')">Index / Source</button>
+    <button class="tab" onclick="filterCards('generation')">Generation</button>
+    <button class="tab" onclick="filterCards('advanced')">Advanced / Agentic</button>
+  </div>
+
+  <!-- CARDS GRID -->
+  <div class="cards-grid" id="cardsGrid">
+
+    <!-- 1. NAIVE RAG -->
+    <div class="rag-card visible" data-cat="foundation" style="--card-color:#00d4ff">
+      <div class="card-header">
+        <div class="card-icon">🏗️</div>
+        <div class="card-tag" style="border-color:#00d4ff33;color:#00d4ff;background:rgba(0,212,255,0.05)">Foundation</div>
+      </div>
+      <div class="card-title">Naive RAG</div>
+      <div class="card-subtitle">The classic retrieve-then-generate pipeline</div>
+      <div class="card-desc">The simplest form of RAG. Chunk your documents, embed them, store in a vector DB, retrieve top-K chunks on query, and pass to the LLM. No frills, but it works surprisingly well for many cases.</div>
+      <div class="expand-btn" onclick="toggleCard(this)">
+        <span class="expand-arrow">▼</span> Show details, use cases & code
+      </div>
+      <div class="card-detail">
+        <div class="card-section-title">📌 Use Cases</div>
+        <div class="use-cases">
+          <div class="use-case"><span class="uc-icon">📚</span>Internal knowledge base Q&A (HR docs, policies)</div>
+          <div class="use-case"><span class="uc-icon">🛠️</span>Simple product documentation chatbots</div>
+          <div class="use-case"><span class="uc-icon">🎓</span>Course material assistants for students</div>
+          <div class="use-case"><span class="uc-icon">📋</span>FAQ automation for customer support</div>
+        </div>
+        <div class="card-section-title">⚖️ Pros & Cons</div>
+        <div class="pros-cons">
+          <div class="pro">✓ Easy to implement</div>
+          <div class="con">✗ Retrieval quality bottleneck</div>
+          <div class="pro">✓ Low latency</div>
+          <div class="con">✗ No iterative reasoning</div>
+          <div class="pro">✓ Low cost</div>
+          <div class="con">✗ Fails on complex queries</div>
+        </div>
+        <div class="card-section-title">💻 Pipeline Pseudocode</div>
+        <div class="code-block"><span class="code-comment"># Naive RAG Pipeline</span>
+<span class="code-key">chunks</span> = <span class="code-fn">split_documents</span>(docs)
+<span class="code-key">vectors</span> = <span class="code-fn">embed</span>(chunks)
+<span class="code-fn">store</span>(vectors, vector_db)
+
+<span class="code-key">query_vec</span> = <span class="code-fn">embed</span>(user_query)
+<span class="code-key">top_k</span> = <span class="code-fn">similarity_search</span>(query_vec, k=5)
+<span class="code-key">answer</span> = <span class="code-fn">llm</span>(user_query + top_k)</div>
+      </div>
+    </div>
+
+    <!-- 2. ADVANCED RAG -->
+    <div class="rag-card visible" data-cat="foundation" style="--card-color:#7c3aed">
+      <div class="card-header">
+        <div class="card-icon">⚡</div>
+        <div class="card-tag" style="border-color:#7c3aed33;color:#a78bfa;background:rgba(124,58,237,0.05)">Foundation</div>
+      </div>
+      <div class="card-title">Advanced RAG</div>
+      <div class="card-subtitle">Pre & post-retrieval optimization</div>
+      <div class="card-desc">Enhances Naive RAG with query rewriting before retrieval, better chunking strategies (semantic/sliding window), and post-retrieval re-ranking to push the best chunks to the top before passing to the LLM.</div>
+      <div class="expand-btn" onclick="toggleCard(this)">
+        <span class="expand-arrow">▼</span> Show details, use cases & code
+      </div>
+      <div class="card-detail">
+        <div class="card-section-title">📌 Use Cases</div>
+        <div class="use-cases">
+          <div class="use-case"><span class="uc-icon">⚖️</span>Legal research assistants requiring precise document retrieval</div>
+          <div class="use-case"><span class="uc-icon">🏥</span>Medical literature search with clinical accuracy needs</div>
+          <div class="use-case"><span class="uc-icon">💼</span>Enterprise search over large heterogeneous document sets</div>
+          <div class="use-case"><span class="uc-icon">🔬</span>Scientific paper Q&A needing methodology-level answers</div>
+        </div>
+        <div class="card-section-title">⚖️ Pros & Cons</div>
+        <div class="pros-cons">
+          <div class="pro">✓ Better retrieval precision</div>
+          <div class="con">✗ More engineering complexity</div>
+          <div class="pro">✓ Re-ranking improves quality</div>
+          <div class="con">✗ Slightly higher latency</div>
+          <div class="pro">✓ Handles ambiguous queries</div>
+          <div class="con">✗ More components to tune</div>
+        </div>
+        <div class="card-section-title">💻 Pipeline Pseudocode</div>
+        <div class="code-block"><span class="code-comment"># Advanced RAG</span>
+<span class="code-key">better_query</span> = <span class="code-fn">rewrite_query</span>(user_query)
+<span class="code-key">candidates</span> = <span class="code-fn">retrieve</span>(better_query, k=20)
+<span class="code-key">top_k</span> = <span class="code-fn">rerank</span>(candidates, user_query, k=5)
+<span class="code-key">answer</span> = <span class="code-fn">llm</span>(user_query + top_k)</div>
+      </div>
+    </div>
+
+    <!-- 3. MODULAR RAG -->
+    <div class="rag-card visible" data-cat="foundation" style="--card-color:#10b981">
+      <div class="card-header">
+        <div class="card-icon">🧩</div>
+        <div class="card-tag" style="border-color:#10b98133;color:#10b981;background:rgba(16,185,129,0.05)">Foundation</div>
+      </div>
+      <div class="card-title">Modular RAG</div>
+      <div class="card-subtitle">Plug-and-play component architecture</div>
+      <div class="card-desc">Treats each stage as a swappable module — retriever, reranker, memory, reader, fusion — enabling custom pipelines. You can mix dense + sparse retrieval, add web search, plug in any LLM, and compose workflows.</div>
+      <div class="expand-btn" onclick="toggleCard(this)">
+        <span class="expand-arrow">▼</span> Show details, use cases & code
+      </div>
+      <div class="card-detail">
+        <div class="card-section-title">📌 Use Cases</div>
+        <div class="use-cases">
+          <div class="use-case"><span class="uc-icon">🏢</span>Production RAG systems needing A/B testing of components</div>
+          <div class="use-case"><span class="uc-icon">🔀</span>Multi-source pipelines (docs + web + database)</div>
+          <div class="use-case"><span class="uc-icon">🚀</span>RAG platforms serving multiple teams with different needs</div>
+          <div class="use-case"><span class="uc-icon">🧪</span>Research environments comparing retrieval strategies</div>
+        </div>
+        <div class="card-section-title">⚖️ Pros & Cons</div>
+        <div class="pros-cons">
+          <div class="pro">✓ Maximum flexibility</div>
+          <div class="con">✗ High upfront design cost</div>
+          <div class="pro">✓ Easy to swap components</div>
+          <div class="con">✗ Complex orchestration</div>
+          <div class="pro">✓ Mix any retrievers</div>
+          <div class="con">✗ Integration testing burden</div>
+        </div>
+        <div class="card-section-title">💻 Architecture Pattern</div>
+        <div class="code-block"><span class="code-comment"># Modular RAG</span>
+<span class="code-key">pipeline</span> = Pipeline([
+  QueryRewriter(),       <span class="code-comment"># module 1</span>
+  HybridRetriever(),     <span class="code-comment"># module 2</span>
+  CrossEncoderReranker(), <span class="code-comment"># module 3</span>
+  ContextCompressor(),   <span class="code-comment"># module 4</span>
+  OpenAIReader()         <span class="code-comment"># module 5</span>
+])
+<span class="code-key">answer</span> = pipeline.<span class="code-fn">run</span>(user_query)</div>
+      </div>
+    </div>
+
+    <!-- 4. DENSE RAG -->
+    <div class="rag-card visible" data-cat="index" style="--card-color:#f59e0b">
+      <div class="card-header">
+        <div class="card-icon">🔢</div>
+        <div class="card-tag" style="border-color:#f59e0b33;color:#f59e0b;background:rgba(245,158,11,0.05)">Index Type</div>
+      </div>
+      <div class="card-title">Dense RAG</div>
+      <div class="card-subtitle">Semantic vector similarity search</div>
+      <div class="card-desc">Uses dense embedding models (like text-embedding-3, BGE, E5) to encode documents and queries into high-dimensional vectors. Retrieval is semantic — finds meaning-similar content even without exact keyword match.</div>
+      <div class="expand-btn" onclick="toggleCard(this)">
+        <span class="expand-arrow">▼</span> Show details, use cases & code
+      </div>
+      <div class="card-detail">
+        <div class="card-section-title">📌 Use Cases</div>
+        <div class="use-cases">
+          <div class="use-case"><span class="uc-icon">💬</span>Conversational search where synonyms matter</div>
+          <div class="use-case"><span class="uc-icon">🌍</span>Multilingual document retrieval</div>
+          <div class="use-case"><span class="uc-icon">📰</span>News article similarity and clustering</div>
+          <div class="use-case"><span class="uc-icon">🛒</span>Product recommendation from description matching</div>
+        </div>
+        <div class="card-section-title">⚖️ Pros & Cons</div>
+        <div class="pros-cons">
+          <div class="pro">✓ Semantic understanding</div>
+          <div class="con">✗ Misses exact keyword matches</div>
+          <div class="pro">✓ Cross-lingual capable</div>
+          <div class="con">✗ Embedding model quality matters</div>
+          <div class="pro">✓ Handles paraphrasing</div>
+          <div class="con">✗ ANN index build time</div>
+        </div>
+        <div class="card-section-title">💻 Implementation</div>
+        <div class="code-block"><span class="code-comment"># Dense Retrieval</span>
+<span class="code-fn">model</span> = SentenceTransformer(<span class="code-str">"BAAI/bge-large"</span>)
+<span class="code-key">doc_vecs</span> = model.<span class="code-fn">encode</span>(chunks)
+index = faiss.IndexFlatIP(dim)
+index.<span class="code-fn">add</span>(doc_vecs)
+
+<span class="code-key">q_vec</span> = model.<span class="code-fn">encode</span>([query])
+scores, ids = index.<span class="code-fn">search</span>(q_vec, k=5)</div>
+      </div>
+    </div>
+
+    <!-- 5. SPARSE RAG -->
+    <div class="rag-card visible" data-cat="index" style="--card-color:#ef4444">
+      <div class="card-header">
+        <div class="card-icon">🔑</div>
+        <div class="card-tag" style="border-color:#ef444433;color:#ef4444;background:rgba(239,68,68,0.05)">Index Type</div>
+      </div>
+      <div class="card-title">Sparse RAG</div>
+      <div class="card-subtitle">Keyword-based BM25 / TF-IDF retrieval</div>
+      <div class="card-desc">Uses traditional IR methods like BM25 that score documents based on exact keyword frequency and inverse document frequency. Extremely reliable when exact terminology matters — IDs, product names, error codes, technical terms.</div>
+      <div class="expand-btn" onclick="toggleCard(this)">
+        <span class="expand-arrow">▼</span> Show details, use cases & code
+      </div>
+      <div class="card-detail">
+        <div class="card-section-title">📌 Use Cases</div>
+        <div class="use-cases">
+          <div class="use-case"><span class="uc-icon">🆔</span>Searching by product SKU, invoice number, error codes</div>
+          <div class="use-case"><span class="uc-icon">⚕️</span>Medical records with ICD-10 codes and drug names</div>
+          <div class="use-case"><span class="uc-icon">⚖️</span>Legal case search by statute number or citation</div>
+          <div class="use-case"><span class="uc-icon">💻</span>Code search by function name or library reference</div>
+        </div>
+        <div class="card-section-title">⚖️ Pros & Cons</div>
+        <div class="pros-cons">
+          <div class="pro">✓ Exact match reliability</div>
+          <div class="con">✗ No semantic understanding</div>
+          <div class="pro">✓ No GPU needed</div>
+          <div class="con">✗ Fails on paraphrasing</div>
+          <div class="pro">✓ Fast, battle-tested</div>
+          <div class="con">✗ Keyword mismatch = miss</div>
+        </div>
+        <div class="card-section-title">💻 Implementation</div>
+        <div class="code-block"><span class="code-comment"># BM25 Sparse Retrieval</span>
+<span class="code-key">tokenized</span> = [doc.<span class="code-fn">split</span>() <span class="code-key">for</span> doc <span class="code-key">in</span> chunks]
+bm25 = BM25Okapi(tokenized)
+
+<span class="code-key">scores</span> = bm25.<span class="code-fn">get_scores</span>(query.<span class="code-fn">split</span>())
+<span class="code-key">top_k</span> = <span class="code-fn">argsort</span>(scores)[:<span class="code-str">-6:-1</span>]</div>
+      </div>
+    </div>
+
+    <!-- 6. HYBRID RAG -->
+    <div class="rag-card visible" data-cat="index" style="--card-color:#06b6d4">
+      <div class="card-header">
+        <div class="card-icon">🔀</div>
+        <div class="card-tag" style="border-color:#06b6d433;color:#06b6d4;background:rgba(6,182,212,0.05)">Index Type</div>
+      </div>
+      <div class="card-title">Hybrid RAG</div>
+      <div class="card-subtitle">Dense + Sparse fusion (best of both)</div>
+      <div class="card-desc">Combines dense semantic search with sparse keyword search. Results are merged using Reciprocal Rank Fusion (RRF) or weighted scoring. Catches both semantic matches and exact keyword hits — the production-ready default.</div>
+      <div class="expand-btn" onclick="toggleCard(this)">
+        <span class="expand-arrow">▼</span> Show details, use cases & code
+      </div>
+      <div class="card-detail">
+        <div class="card-section-title">📌 Use Cases</div>
+        <div class="use-cases">
+          <div class="use-case"><span class="uc-icon">🏦</span>Financial research mixing terminology and meaning</div>
+          <div class="use-case"><span class="uc-icon">🛒</span>E-commerce search (exact SKU + semantic description)</div>
+          <div class="use-case"><span class="uc-icon">🏥</span>Healthcare: ICD codes + clinical text understanding</div>
+          <div class="use-case"><span class="uc-icon">🔧</span>DevOps log search mixing error codes + natural language</div>
+        </div>
+        <div class="card-section-title">⚖️ Pros & Cons</div>
+        <div class="pros-cons">
+          <div class="pro">✓ Best overall recall</div>
+          <div class="con">✗ Higher infra cost</div>
+          <div class="pro">✓ Handles mixed queries</div>
+          <div class="con">✗ Fusion weight tuning needed</div>
+          <div class="pro">✓ Production proven</div>
+          <div class="con">✗ 2 indexes to maintain</div>
+        </div>
+        <div class="card-section-title">💻 RRF Fusion</div>
+        <div class="code-block"><span class="code-comment"># Reciprocal Rank Fusion</span>
+<span class="code-fn">dense_results</span> = vector_db.<span class="code-fn">search</span>(query, k=20)
+<span class="code-fn">sparse_results</span> = bm25.<span class="code-fn">search</span>(query, k=20)
+
+<span class="code-key">for</span> rank, doc <span class="code-key">in</span> results:
+  score += <span class="code-str">1</span> / (k + rank)  <span class="code-comment"># RRF formula</span>
+
+<span class="code-key">top_k</span> = <span class="code-fn">sort_by_rrf_score</span>(merged)</div>
+      </div>
+    </div>
+
+    <!-- 7. GRAPH RAG -->
+    <div class="rag-card visible" data-cat="index" style="--card-color:#8b5cf6">
+      <div class="card-header">
+        <div class="card-icon">🕸️</div>
+        <div class="card-tag" style="border-color:#8b5cf633;color:#a78bfa;background:rgba(139,92,246,0.05)">Index Type</div>
+      </div>
+      <div class="card-title">Graph RAG</div>
+      <div class="card-subtitle">Knowledge graph + entity relationship retrieval</div>
+      <div class="card-desc">Builds a knowledge graph from documents — extracting entities (people, orgs, concepts) and relationships between them. Retrieval traverses the graph, enabling answers that require connecting facts across multiple documents.</div>
+      <div class="expand-btn" onclick="toggleCard(this)">
+        <span class="expand-arrow">▼</span> Show details, use cases & code
+      </div>
+      <div class="card-detail">
+        <div class="card-section-title">📌 Use Cases</div>
+        <div class="use-cases">
+          <div class="use-case"><span class="uc-icon">🔍</span>Investigative research: "How are Person A and Company B connected?"</div>
+          <div class="use-case"><span class="uc-icon">💊</span>Drug-interaction mapping across medical literature</div>
+          <div class="use-case"><span class="uc-icon">🏢</span>Org chart / corporate hierarchy reasoning</div>
+          <div class="use-case"><span class="uc-icon">🧬</span>Gene-protein-disease relationship queries in biomedical research</div>
+        </div>
+        <div class="card-section-title">⚖️ Pros & Cons</div>
+        <div class="pros-cons">
+          <div class="pro">✓ Multi-hop reasoning</div>
+          <div class="con">✗ Expensive graph construction</div>
+          <div class="pro">✓ Captures relationships</div>
+          <div class="con">✗ Entity extraction errors propagate</div>
+          <div class="pro">✓ Explainable reasoning paths</div>
+          <div class="con">✗ Complex to maintain</div>
+        </div>
+        <div class="card-section-title">💻 Graph Construction</div>
+        <div class="code-block"><span class="code-comment"># Graph RAG (e.g. Microsoft GraphRAG)</span>
+<span class="code-key">entities, relations</span> = <span class="code-fn">extract_kg</span>(docs)
+graph = Neo4j()
+graph.<span class="code-fn">add</span>(entities, relations)
+
+<span class="code-key">subgraph</span> = graph.<span class="code-fn">traverse</span>(
+  start=<span class="code-fn">entity_from</span>(query),
+  depth=<span class="code-str">3</span>
+)
+<span class="code-key">answer</span> = <span class="code-fn">llm</span>(query + subgraph)</div>
+      </div>
+    </div>
+
+    <!-- 8. MULTI-HOP RAG -->
+    <div class="rag-card visible" data-cat="query" style="--card-color:#f97316">
+      <div class="card-header">
+        <div class="card-icon">🔗</div>
+        <div class="card-tag" style="border-color:#f9731633;color:#f97316;background:rgba(249,115,22,0.05)">Query Strategy</div>
+      </div>
+      <div class="card-title">Multi-Hop RAG</div>
+      <div class="card-subtitle">Chain of retrieval steps for complex queries</div>
+      <div class="card-desc">Each retrieval step informs the next. The model retrieves initial context, reasons about what's still missing, retrieves again based on that reasoning, and repeats — like following a chain of clues to reach the final answer.</div>
+      <div class="expand-btn" onclick="toggleCard(this)">
+        <span class="expand-arrow">▼</span> Show details, use cases & code
+      </div>
+      <div class="card-detail">
+        <div class="card-section-title">📌 Use Cases</div>
+        <div class="use-cases">
+          <div class="use-case"><span class="uc-icon">📜</span>"Who founded the company that acquired X?" — requires chaining facts</div>
+          <div class="use-case"><span class="uc-icon">🏛️</span>Legal reasoning: statute → case law → precedent</div>
+          <div class="use-case"><span class="uc-icon">🔭</span>Scientific hypothesis exploration across papers</div>
+          <div class="use-case"><span class="uc-icon">🕵️</span>Investigative journalism connecting events across time</div>
+        </div>
+        <div class="card-section-title">⚖️ Pros & Cons</div>
+        <div class="pros-cons">
+          <div class="pro">✓ Handles bridge questions</div>
+          <div class="con">✗ Latency multiplies with hops</div>
+          <div class="pro">✓ Reasons across documents</div>
+          <div class="con">✗ Error can compound per hop</div>
+          <div class="pro">✓ Structured reasoning</div>
+          <div class="con">✗ Hard to determine when to stop</div>
+        </div>
+        <div class="card-section-title">💻 Multi-Hop Loop</div>
+        <div class="code-block"><span class="code-comment"># Multi-Hop Retrieval</span>
+<span class="code-key">context</span> = []
+<span class="code-key">current_query</span> = user_query
+
+<span class="code-key">for</span> hop <span class="code-key">in</span> range(max_hops):
+  <span class="code-key">docs</span> = <span class="code-fn">retrieve</span>(current_query)
+  context.<span class="code-fn">append</span>(docs)
+  <span class="code-key">current_query</span> = <span class="code-fn">llm_followup</span>(
+    user_query, context
+  )
+  <span class="code-key">if</span> <span class="code-fn">has_answer</span>(context): <span class="code-key">break</span>
+
+<span class="code-key">answer</span> = <span class="code-fn">llm</span>(user_query + context)</div>
+      </div>
+    </div>
+
+    <!-- 9. ITERATIVE RAG -->
+    <div class="rag-card visible" data-cat="query" style="--card-color:#ec4899">
+      <div class="card-header">
+        <div class="card-icon">🔄</div>
+        <div class="card-tag" style="border-color:#ec489933;color:#ec4899;background:rgba(236,72,153,0.05)">Query Strategy</div>
+      </div>
+      <div class="card-title">Iterative RAG</div>
+      <div class="card-subtitle">Retrieve → reason → retrieve loop</div>
+      <div class="card-desc">The LLM iteratively retrieves more information until it has enough to answer confidently. Unlike multi-hop (fixed structure), iterative RAG lets the model decide when to keep searching — more dynamic and flexible.</div>
+      <div class="expand-btn" onclick="toggleCard(this)">
+        <span class="expand-arrow">▼</span> Show details, use cases & code
+      </div>
+      <div class="card-detail">
+        <div class="card-section-title">📌 Use Cases</div>
+        <div class="use-cases">
+          <div class="use-case"><span class="uc-icon">📊</span>Complex business analysis needing multiple data points</div>
+          <div class="use-case"><span class="uc-icon">🤔</span>Open-ended research where depth is unknown upfront</div>
+          <div class="use-case"><span class="uc-icon">📝</span>Report generation from large document collections</div>
+          <div class="use-case"><span class="uc-icon">🩺</span>Differential diagnosis requiring iterative symptom lookup</div>
+        </div>
+        <div class="card-section-title">⚖️ Pros & Cons</div>
+        <div class="pros-cons">
+          <div class="pro">✓ Adaptive depth</div>
+          <div class="con">✗ Unpredictable latency</div>
+          <div class="pro">✓ Self-directed research</div>
+          <div class="con">✗ Risk of infinite loops</div>
+          <div class="pro">✓ Natural stopping logic</div>
+          <div class="con">✗ More LLM calls = higher cost</div>
+        </div>
+        <div class="card-section-title">💻 Iteration Pattern</div>
+        <div class="code-block"><span class="code-comment"># Iterative RAG</span>
+<span class="code-key">context</span>, <span class="code-key">iterations</span> = [], <span class="code-str">0</span>
+
+<span class="code-key">while</span> <span class="code-key">not</span> <span class="code-fn">sufficient</span>(context):
+  <span class="code-key">next_q</span> = <span class="code-fn">llm_plan</span>(user_query, context)
+  <span class="code-key">new_docs</span> = <span class="code-fn">retrieve</span>(next_q)
+  context += new_docs
+  iterations += <span class="code-str">1</span>
+  <span class="code-key">if</span> iterations > max_iter: <span class="code-key">break</span>
+
+<span class="code-key">final</span> = <span class="code-fn">llm</span>(user_query + context)</div>
+      </div>
+    </div>
+
+    <!-- 10. ADAPTIVE RAG -->
+    <div class="rag-card visible" data-cat="query" style="--card-color:#14b8a6">
+      <div class="card-header">
+        <div class="card-icon">🎯</div>
+        <div class="card-tag" style="border-color:#14b8a633;color:#14b8a6;background:rgba(20,184,166,0.05)">Query Strategy</div>
+      </div>
+      <div class="card-title">Adaptive RAG</div>
+      <div class="card-subtitle">Decides whether to retrieve at all</div>
+      <div class="card-desc">Classifies queries by complexity and routes them: simple factual questions go straight to the LLM (no retrieval needed), moderate queries use single-step RAG, complex ones use multi-step RAG. Saves cost and latency.</div>
+      <div class="expand-btn" onclick="toggleCard(this)">
+        <span class="expand-arrow">▼</span> Show details, use cases & code
+      </div>
+      <div class="card-detail">
+        <div class="card-section-title">📌 Use Cases</div>
+        <div class="use-cases">
+          <div class="use-case"><span class="uc-icon">💬</span>General-purpose chatbots handling both simple and deep questions</div>
+          <div class="use-case"><span class="uc-icon">⚡</span>High-volume apps where retrieval cost must be minimized</div>
+          <div class="use-case"><span class="uc-icon">🤖</span>Customer service bots with mixed query complexity</div>
+          <div class="use-case"><span class="uc-icon">📱</span>Mobile AI assistants with strict latency budgets</div>
+        </div>
+        <div class="card-section-title">⚖️ Pros & Cons</div>
+        <div class="pros-cons">
+          <div class="pro">✓ Cost-efficient</div>
+          <div class="con">✗ Router must be accurate</div>
+          <div class="pro">✓ Optimal latency per query</div>
+          <div class="con">✗ Misclassification causes errors</div>
+          <div class="pro">✓ Scales well</div>
+          <div class="con">✗ More routing logic to maintain</div>
+        </div>
+        <div class="card-section-title">💻 Query Router</div>
+        <div class="code-block"><span class="code-comment"># Adaptive RAG Router</span>
+<span class="code-key">complexity</span> = <span class="code-fn">classify_query</span>(user_query)
+<span class="code-comment"># → "simple" | "single_hop" | "multi_hop"</span>
+
+<span class="code-key">if</span> complexity == <span class="code-str">"simple"</span>:
+  <span class="code-key">answer</span> = <span class="code-fn">llm_direct</span>(user_query)
+<span class="code-key">elif</span> complexity == <span class="code-str">"single_hop"</span>:
+  <span class="code-key">answer</span> = <span class="code-fn">naive_rag</span>(user_query)
+<span class="code-key">else</span>:
+  <span class="code-key">answer</span> = <span class="code-fn">multi_hop_rag</span>(user_query)</div>
+      </div>
+    </div>
+
+    <!-- 11. RAG-FUSION -->
+    <div class="rag-card visible" data-cat="generation" style="--card-color:#f43f5e">
+      <div class="card-header">
+        <div class="card-icon">🔮</div>
+        <div class="card-tag" style="border-color:#f43f5e33;color:#f43f5e;background:rgba(244,63,94,0.05)">Generation</div>
+      </div>
+      <div class="card-title">RAG Fusion</div>
+      <div class="card-subtitle">Multi-query generation + result merging</div>
+      <div class="card-desc">Generates 3–5 variations of the user's query, retrieves documents for each, then merges all result sets using Reciprocal Rank Fusion. This expands coverage and reduces the chance of missing relevant content due to query phrasing.</div>
+      <div class="expand-btn" onclick="toggleCard(this)">
+        <span class="expand-arrow">▼</span> Show details, use cases & code
+      </div>
+      <div class="card-detail">
+        <div class="card-section-title">📌 Use Cases</div>
+        <div class="use-cases">
+          <div class="use-case"><span class="uc-icon">🔍</span>Research assistants where query phrasing varies widely</div>
+          <div class="use-case"><span class="uc-icon">🌐</span>Multi-language corpora requiring perspective-diverse retrieval</div>
+          <div class="use-case"><span class="uc-icon">📖</span>Academic literature review needing comprehensive coverage</div>
+          <div class="use-case"><span class="uc-icon">🏷️</span>Product search where users describe items differently</div>
+        </div>
+        <div class="card-section-title">⚖️ Pros & Cons</div>
+        <div class="pros-cons">
+          <div class="pro">✓ Higher recall coverage</div>
+          <div class="con">✗ 3-5x retrieval cost</div>
+          <div class="pro">✓ Diverse perspectives</div>
+          <div class="con">✗ More LLM calls for query gen</div>
+          <div class="pro">✓ Less query sensitivity</div>
+          <div class="con">✗ Latency increase</div>
+        </div>
+        <div class="card-section-title">💻 Fusion Pipeline</div>
+        <div class="code-block"><span class="code-comment"># RAG Fusion</span>
+<span class="code-key">sub_queries</span> = <span class="code-fn">llm_generate_queries</span>(
+  user_query, n=<span class="code-str">4</span>
+)
+<span class="code-key">all_results</span> = []
+<span class="code-key">for</span> q <span class="code-key">in</span> sub_queries:
+  all_results.<span class="code-fn">append</span>(<span class="code-fn">retrieve</span>(q, k=10))
+
+<span class="code-key">merged</span> = <span class="code-fn">reciprocal_rank_fusion</span>(all_results)
+<span class="code-key">answer</span> = <span class="code-fn">llm</span>(user_query + merged[:<span class="code-str">5</span>])</div>
+      </div>
+    </div>
+
+    <!-- 12. SELF-RAG -->
+    <div class="rag-card visible" data-cat="generation" style="--card-color:#3b82f6">
+      <div class="card-header">
+        <div class="card-icon">🪞</div>
+        <div class="card-tag" style="border-color:#3b82f633;color:#3b82f6;background:rgba(59,130,246,0.05)">Generation</div>
+      </div>
+      <div class="card-title">Self-RAG</div>
+      <div class="card-subtitle">LLM decides when to retrieve & self-critiques</div>
+      <div class="card-desc">The LLM is fine-tuned to generate special reflection tokens — [Retrieve], [Relevant], [IsSupported], [IsUseful] — to decide when to search, whether retrieved docs are relevant, and whether the generated answer is grounded.</div>
+      <div class="expand-btn" onclick="toggleCard(this)">
+        <span class="expand-arrow">▼</span> Show details, use cases & code
+      </div>
+      <div class="card-detail">
+        <div class="card-section-title">📌 Use Cases</div>
+        <div class="use-cases">
+          <div class="use-case"><span class="uc-icon">🩺</span>Medical Q&A needing grounded, verifiable answers</div>
+          <div class="use-case"><span class="uc-icon">⚖️</span>Legal advice systems requiring citation grounding</div>
+          <div class="use-case"><span class="uc-icon">📰</span>Fact-checking assistants that need to verify claims</div>
+          <div class="use-case"><span class="uc-icon">🎓</span>Educational platforms where accuracy is non-negotiable</div>
+        </div>
+        <div class="card-section-title">⚖️ Pros & Cons</div>
+        <div class="pros-cons">
+          <div class="pro">✓ Reduces hallucination</div>
+          <div class="con">✗ Requires fine-tuned model</div>
+          <div class="pro">✓ Self-verifying outputs</div>
+          <div class="con">✗ Complex training pipeline</div>
+          <div class="pro">✓ Smart retrieval decisions</div>
+          <div class="con">✗ Not plug-and-play</div>
+        </div>
+        <div class="card-section-title">💻 Reflection Tokens</div>
+        <div class="code-block"><span class="code-comment"># Self-RAG (simplified)</span>
+output = model.<span class="code-fn">generate</span>(query)
+<span class="code-comment"># Model outputs e.g.:</span>
+<span class="code-comment"># "[Retrieve=Yes] The answer..."</span>
+<span class="code-comment"># "[IsSupported=Fully]"</span>
+<span class="code-comment"># "[IsUseful=5]"</span>
+
+<span class="code-key">if</span> output.<span class="code-fn">needs_retrieval</span>():
+  <span class="code-key">docs</span> = <span class="code-fn">retrieve</span>(query)
+  output = model.<span class="code-fn">generate</span>(query + docs)
+<span class="code-key">return</span> output.<span class="code-fn">best_passage</span>()</div>
+      </div>
+    </div>
+
+    <!-- 13. CORRECTIVE RAG -->
+    <div class="rag-card visible" data-cat="generation" style="--card-color:#84cc16">
+      <div class="card-header">
+        <div class="card-icon">✏️</div>
+        <div class="card-tag" style="border-color:#84cc1633;color:#84cc16;background:rgba(132,204,22,0.05)">Generation</div>
+      </div>
+      <div class="card-title">Corrective RAG (CRAG)</div>
+      <div class="card-subtitle">Evaluates retrieval quality, falls back to web</div>
+      <div class="card-desc">After retrieval, a lightweight evaluator scores document relevance. If score is high → proceed. If ambiguous → refine. If low → trigger a web search to supplement or replace the retrieved content entirely. Graceful degradation.</div>
+      <div class="expand-btn" onclick="toggleCard(this)">
+        <span class="expand-arrow">▼</span> Show details, use cases & code
+      </div>
+      <div class="card-detail">
+        <div class="card-section-title">📌 Use Cases</div>
+        <div class="use-cases">
+          <div class="use-case"><span class="uc-icon">📰</span>News/current events where static KB may be outdated</div>
+          <div class="use-case"><span class="uc-icon">🌐</span>General-purpose assistants with partial knowledge bases</div>
+          <div class="use-case"><span class="uc-icon">🔬</span>Research tools where no-answer is worse than web search</div>
+          <div class="use-case"><span class="uc-icon">💼</span>Enterprise systems with incomplete internal docs</div>
+        </div>
+        <div class="card-section-title">⚖️ Pros & Cons</div>
+        <div class="pros-cons">
+          <div class="pro">✓ Graceful fallback</div>
+          <div class="con">✗ Evaluator must be accurate</div>
+          <div class="pro">✓ Avoids bad context</div>
+          <div class="con">✗ Web search adds latency</div>
+          <div class="pro">✓ High answer quality</div>
+          <div class="con">✗ Two retrieval systems needed</div>
+        </div>
+        <div class="card-section-title">💻 Corrective Loop</div>
+        <div class="code-block"><span class="code-comment"># CRAG Pipeline</span>
+<span class="code-key">docs</span> = <span class="code-fn">retrieve</span>(query)
+<span class="code-key">score</span> = <span class="code-fn">evaluate_relevance</span>(docs, query)
+
+<span class="code-key">if</span> score > <span class="code-str">0.8</span>:
+  context = docs         <span class="code-comment"># ✓ Good</span>
+<span class="code-key">elif</span> score > <span class="code-str">0.4</span>:
+  context = <span class="code-fn">refine</span>(docs)  <span class="code-comment"># ~ Ambiguous</span>
+<span class="code-key">else</span>:
+  context = <span class="code-fn">web_search</span>(query)  <span class="code-comment"># ✗ Bad</span>
+
+<span class="code-key">answer</span> = <span class="code-fn">llm</span>(query + context)</div>
+      </div>
+    </div>
+
+    <!-- 14. HYDE -->
+    <div class="rag-card visible" data-cat="query" style="--card-color:#a855f7">
+      <div class="card-header">
+        <div class="card-icon">💡</div>
+        <div class="card-tag" style="border-color:#a855f733;color:#a855f7;background:rgba(168,85,247,0.05)">Query Strategy</div>
+      </div>
+      <div class="card-title">HyDE</div>
+      <div class="card-subtitle">Hypothetical Document Embeddings</div>
+      <div class="card-desc">Instead of embedding the query directly, the LLM generates a hypothetical document that would answer the query, then embeds that. This closes the gap between short queries and long document chunks in the vector space.</div>
+      <div class="expand-btn" onclick="toggleCard(this)">
+        <span class="expand-arrow">▼</span> Show details, use cases & code
+      </div>
+      <div class="card-detail">
+        <div class="card-section-title">📌 Use Cases</div>
+        <div class="use-cases">
+          <div class="use-case"><span class="uc-icon">🔬</span>Scientific search where queries are very short but docs are long</div>
+          <div class="use-case"><span class="uc-icon">📚</span>Library/archive search with sparse queries</div>
+          <div class="use-case"><span class="uc-icon">🩺</span>Clinical notes retrieval from brief diagnostic codes</div>
+          <div class="use-case"><span class="uc-icon">🧑‍💻</span>Code search from natural language function descriptions</div>
+        </div>
+        <div class="card-section-title">⚖️ Pros & Cons</div>
+        <div class="pros-cons">
+          <div class="pro">✓ Better query-doc alignment</div>
+          <div class="con">✗ Hypothetical doc may hallucinate</div>
+          <div class="pro">✓ Improves recall on short queries</div>
+          <div class="con">✗ Extra LLM call per query</div>
+          <div class="pro">✓ Simple to implement</div>
+          <div class="con">✗ Quality depends on LLM</div>
+        </div>
+        <div class="card-section-title">💻 HyDE Pipeline</div>
+        <div class="code-block"><span class="code-comment"># Hypothetical Document Embeddings</span>
+<span class="code-key">hypo_doc</span> = <span class="code-fn">llm</span>(
+  <span class="code-str">f"Write a passage that answers: {query}"</span>
+)
+
+<span class="code-comment"># Use hypo doc for retrieval, not query</span>
+<span class="code-key">vec</span> = <span class="code-fn">embed</span>(hypo_doc)
+<span class="code-key">top_k</span> = vector_db.<span class="code-fn">search</span>(vec, k=5)
+<span class="code-key">answer</span> = <span class="code-fn">llm</span>(query + top_k)</div>
+      </div>
+    </div>
+
+    <!-- 15. AGENTIC RAG -->
+    <div class="rag-card visible" data-cat="advanced" style="--card-color:#f97316">
+      <div class="card-header">
+        <div class="card-icon">🤖</div>
+        <div class="card-tag" style="border-color:#f9731633;color:#f97316;background:rgba(249,115,22,0.05)">Advanced</div>
+      </div>
+      <div class="card-title">Agentic RAG</div>
+      <div class="card-subtitle">LLM agent orchestrates retrieval with tools</div>
+      <div class="card-desc">An LLM agent uses retrieval as one of many tools — alongside web search, calculators, code execution, APIs. It plans multi-step, decides which tool to use, and iterates until the task is solved. The future of RAG.</div>
+      <div class="expand-btn" onclick="toggleCard(this)">
+        <span class="expand-arrow">▼</span> Show details, use cases & code
+      </div>
+      <div class="card-detail">
+        <div class="card-section-title">📌 Use Cases</div>
+        <div class="use-cases">
+          <div class="use-case"><span class="uc-icon">📊</span>Financial analysis: search docs + pull live data + run calculations</div>
+          <div class="use-case"><span class="uc-icon">🔧</span>DevOps assistant: search runbooks + check monitoring APIs + take action</div>
+          <div class="use-case"><span class="uc-icon">🏥</span>Clinical decision support: search literature + EHR data + guidelines</div>
+          <div class="use-case"><span class="uc-icon">🛒</span>Autonomous shopping agent: search catalog + compare + place orders</div>
+        </div>
+        <div class="card-section-title">⚖️ Pros & Cons</div>
+        <div class="pros-cons">
+          <div class="pro">✓ Most capable pattern</div>
+          <div class="con">✗ Highest cost & latency</div>
+          <div class="pro">✓ Handles any task complexity</div>
+          <div class="con">✗ Harder to control/audit</div>
+          <div class="pro">✓ Self-correcting</div>
+          <div class="con">✗ Needs careful safety design</div>
+        </div>
+        <div class="card-section-title">💻 Agent Loop</div>
+        <div class="code-block"><span class="code-comment"># Agentic RAG</span>
+<span class="code-key">tools</span> = [vector_search, web_search, 
+         sql_query, calculator, code_exec]
+
+<span class="code-key">agent</span> = <span class="code-fn">ReActAgent</span>(llm, tools)
+<span class="code-key">result</span> = agent.<span class="code-fn">run</span>(task)
+
+<span class="code-comment"># Agent internally:</span>
+<span class="code-comment"># Thought → Action → Observation</span>
+<span class="code-comment"># → Thought → Action → ...</span>
+<span class="code-comment"># → Final Answer</span></div>
+      </div>
+    </div>
+
+    <!-- 16. SPECULATIVE RAG -->
+    <div class="rag-card visible" data-cat="advanced" style="--card-color:#0ea5e9">
+      <div class="card-header">
+        <div class="card-icon">⚡</div>
+        <div class="card-tag" style="border-color:#0ea5e933;color:#0ea5e9;background:rgba(14,165,233,0.05)">Advanced</div>
+      </div>
+      <div class="card-title">Speculative RAG</div>
+      <div class="card-subtitle">Small model drafts, large model verifies</div>
+      <div class="card-desc">A smaller, faster LLM generates a draft answer speculatively using retrieved context. Then a larger, more capable LLM verifies and refines it. Reduces latency and cost while maintaining quality — like speculative decoding for RAG.</div>
+      <div class="expand-btn" onclick="toggleCard(this)">
+        <span class="expand-arrow">▼</span> Show details, use cases & code
+      </div>
+      <div class="card-detail">
+        <div class="card-section-title">📌 Use Cases</div>
+        <div class="use-cases">
+          <div class="use-case"><span class="uc-icon">⚡</span>High-throughput APIs needing fast responses at scale</div>
+          <div class="use-case"><span class="uc-icon">💰</span>Cost-constrained systems wanting GPT-4 quality at lower cost</div>
+          <div class="use-case"><span class="uc-icon">📞</span>Real-time voice assistants with strict latency SLAs</div>
+          <div class="use-case"><span class="uc-icon">🏭</span>Production systems with mixed simple/complex query loads</div>
+        </div>
+        <div class="card-section-title">⚖️ Pros & Cons</div>
+        <div class="pros-cons">
+          <div class="pro">✓ Lower cost than full large LLM</div>
+          <div class="con">✗ Two models to manage</div>
+          <div class="pro">✓ Faster time-to-first-token</div>
+          <div class="con">✗ Verification overhead</div>
+          <div class="pro">✓ High quality output</div>
+          <div class="con">✗ Complex orchestration</div>
+        </div>
+        <div class="card-section-title">💻 Draft-Verify Pattern</div>
+        <div class="code-block"><span class="code-comment"># Speculative RAG</span>
+<span class="code-key">docs</span> = <span class="code-fn">retrieve</span>(query)
+
+<span class="code-comment"># Fast small model drafts</span>
+<span class="code-key">draft</span> = small_llm.<span class="code-fn">generate</span>(query + docs)
+
+<span class="code-comment"># Large model verifies/refines</span>
+<span class="code-key">final</span> = large_llm.<span class="code-fn">verify</span>(
+  query, docs, draft
+)</div>
+      </div>
+    </div>
+
+    <!-- 17. STRUCTURED RAG -->
+    <div class="rag-card visible" data-cat="index" style="--card-color:#f59e0b">
+      <div class="card-header">
+        <div class="card-icon">🗄️</div>
+        <div class="card-tag" style="border-color:#f59e0b33;color:#f59e0b;background:rgba(245,158,11,0.05)">Index Type</div>
+      </div>
+      <div class="card-title">Structured RAG</div>
+      <div class="card-subtitle">NL-to-SQL over databases and tables</div>
+      <div class="card-desc">Instead of unstructured text, retrieval is from SQL databases, spreadsheets, or APIs. The LLM converts the natural language query into SQL (Text-to-SQL), executes it, and uses the structured results as context to generate the answer.</div>
+      <div class="expand-btn" onclick="toggleCard(this)">
+        <span class="expand-arrow">▼</span> Show details, use cases & code
+      </div>
+      <div class="card-detail">
+        <div class="card-section-title">📌 Use Cases</div>
+        <div class="use-cases">
+          <div class="use-case"><span class="uc-icon">📊</span>Business intelligence — "What were last quarter's top 5 products?"</div>
+          <div class="use-case"><span class="uc-icon">🏦</span>Banking dashboards querying transaction databases</div>
+          <div class="use-case"><span class="uc-icon">🏥</span>Hospital analytics over EHR databases</div>
+          <div class="use-case"><span class="uc-icon">🛒</span>E-commerce inventory and sales reporting via NL</div>
+        </div>
+        <div class="card-section-title">⚖️ Pros & Cons</div>
+        <div class="pros-cons">
+          <div class="pro">✓ Precise, structured answers</div>
+          <div class="con">✗ SQL generation can fail on complex schemas</div>
+          <div class="pro">✓ Works on live data</div>
+          <div class="con">✗ Needs schema context in prompt</div>
+          <div class="pro">✓ No embedding needed</div>
+          <div class="con">✗ DB access security risk</div>
+        </div>
+        <div class="card-section-title">💻 Text-to-SQL Pattern</div>
+        <div class="code-block"><span class="code-comment"># Structured RAG</span>
+<span class="code-key">sql</span> = <span class="code-fn">llm</span>(
+  schema + <span class="code-str">f"Convert to SQL: {query}"</span>
+)
+<span class="code-key">rows</span> = db.<span class="code-fn">execute</span>(sql)
+<span class="code-key">answer</span> = <span class="code-fn">llm</span>(
+  <span class="code-str">f"Answer {query} given: {rows}"</span>
+)</div>
+      </div>
+    </div>
+
+    <!-- 18. MULTIMODAL RAG -->
+    <div class="rag-card visible" data-cat="advanced" style="--card-color:#ec4899">
+      <div class="card-header">
+        <div class="card-icon">🖼️</div>
+        <div class="card-tag" style="border-color:#ec489933;color:#ec4899;background:rgba(236,72,153,0.05)">Advanced</div>
+      </div>
+      <div class="card-title">Multimodal RAG</div>
+      <div class="card-subtitle">Retrieve images, tables, charts, audio</div>
+      <div class="card-desc">Extends RAG beyond text to retrieve and reason over images, charts, diagrams, PDFs with mixed content, audio transcripts, or video frames. Uses multimodal embeddings (CLIP, ImageBind) and multimodal LLMs (GPT-4V, Gemini).</div>
+      <div class="expand-btn" onclick="toggleCard(this)">
+        <span class="expand-arrow">▼</span> Show details, use cases & code
+      </div>
+      <div class="card-detail">
+        <div class="card-section-title">📌 Use Cases</div>
+        <div class="use-cases">
+          <div class="use-case"><span class="uc-icon">🏭</span>Manufacturing: query manuals with diagrams and images</div>
+          <div class="use-case"><span class="uc-icon">🩻</span>Medical imaging: retrieve similar X-rays + clinical notes</div>
+          <div class="use-case"><span class="uc-icon">📐</span>Architecture/engineering: search technical drawings + specs</div>
+          <div class="use-case"><span class="uc-icon">🎥</span>Video understanding: retrieve relevant scenes from footage</div>
+        </div>
+        <div class="card-section-title">⚖️ Pros & Cons</div>
+        <div class="pros-cons">
+          <div class="pro">✓ Full document understanding</div>
+          <div class="con">✗ Complex multimodal indexing</div>
+          <div class="pro">✓ Works on charts/diagrams</div>
+          <div class="con">✗ Higher compute cost</div>
+          <div class="pro">✓ Rich context retrieval</div>
+          <div class="con">✗ Fewer production-ready tools</div>
+        </div>
+        <div class="card-section-title">💻 Multimodal Pipeline</div>
+        <div class="code-block"><span class="code-comment"># Multimodal RAG</span>
+<span class="code-key">img_vecs</span> = <span class="code-fn">clip_encode</span>(images)
+<span class="code-key">txt_vecs</span> = <span class="code-fn">text_encode</span>(text_chunks)
+<span class="code-fn">store_all</span>(img_vecs + txt_vecs)
+
+<span class="code-key">q_vec</span> = <span class="code-fn">clip_encode</span>(query)
+<span class="code-key">results</span> = <span class="code-fn">search</span>(q_vec)  <span class="code-comment"># mixed</span>
+<span class="code-key">answer</span> = multimodal_llm.<span class="code-fn">generate</span>(
+  query, results
+)</div>
+      </div>
+    </div>
+
+  </div><!-- end cards-grid -->
+
+  <!-- COMPARISON TABLE -->
+  <div class="comparison">
+    <div class="section-header">📊 Quick Comparison</div>
+    <div style="overflow-x:auto; border: 1px solid var(--border); border-radius: 12px;">
+      <table>
+        <thead>
+          <tr>
+            <th>RAG Type</th>
+            <th>Best For</th>
+            <th>Complexity</th>
+            <th>Latency</th>
+            <th>Cost</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="td-name">Naive RAG</td><td>Simple Q&A, small KB</td><td><span class="badge badge-low">Low</span></td><td><span class="badge badge-low">Fast</span></td><td><span class="badge badge-low">$</span></td></tr>
+          <tr><td class="td-name">Advanced RAG</td><td>Production docs, accuracy-critical</td><td><span class="badge badge-med">Medium</span></td><td><span class="badge badge-med">Medium</span></td><td><span class="badge badge-med">$$</span></td></tr>
+          <tr><td class="td-name">Modular RAG</td><td>Enterprise platforms</td><td><span class="badge badge-high">High</span></td><td><span class="badge badge-med">Medium</span></td><td><span class="badge badge-med">$$</span></td></tr>
+          <tr><td class="td-name">Dense RAG</td><td>Semantic search, NL queries</td><td><span class="badge badge-low">Low</span></td><td><span class="badge badge-low">Fast</span></td><td><span class="badge badge-low">$</span></td></tr>
+          <tr><td class="td-name">Sparse RAG</td><td>Exact terms, codes, IDs</td><td><span class="badge badge-low">Low</span></td><td><span class="badge badge-low">Fast</span></td><td><span class="badge badge-low">$</span></td></tr>
+          <tr><td class="td-name">Hybrid RAG</td><td>General production default</td><td><span class="badge badge-med">Medium</span></td><td><span class="badge badge-med">Medium</span></td><td><span class="badge badge-med">$$</span></td></tr>
+          <tr><td class="td-name">Graph RAG</td><td>Relationship reasoning</td><td><span class="badge badge-high">High</span></td><td><span class="badge badge-med">Medium</span></td><td><span class="badge badge-high">$$$</span></td></tr>
+          <tr><td class="td-name">Multi-Hop RAG</td><td>Complex, chained questions</td><td><span class="badge badge-med">Medium</span></td><td><span class="badge badge-high">Slow</span></td><td><span class="badge badge-med">$$</span></td></tr>
+          <tr><td class="td-name">Adaptive RAG</td><td>Mixed-complexity, high volume</td><td><span class="badge badge-med">Medium</span></td><td><span class="badge badge-low">Fast</span></td><td><span class="badge badge-low">$</span></td></tr>
+          <tr><td class="td-name">RAG Fusion</td><td>Comprehensive research</td><td><span class="badge badge-med">Medium</span></td><td><span class="badge badge-med">Medium</span></td><td><span class="badge badge-med">$$</span></td></tr>
+          <tr><td class="td-name">Self-RAG</td><td>High-accuracy, grounded answers</td><td><span class="badge badge-high">High</span></td><td><span class="badge badge-med">Medium</span></td><td><span class="badge badge-med">$$</span></td></tr>
+          <tr><td class="td-name">CRAG</td><td>Incomplete KBs, news/current events</td><td><span class="badge badge-med">Medium</span></td><td><span class="badge badge-med">Medium</span></td><td><span class="badge badge-med">$$</span></td></tr>
+          <tr><td class="td-name">HyDE</td><td>Short queries, long documents</td><td><span class="badge badge-low">Low</span></td><td><span class="badge badge-med">Medium</span></td><td><span class="badge badge-med">$$</span></td></tr>
+          <tr><td class="td-name">Agentic RAG</td><td>Complex multi-step tasks</td><td><span class="badge badge-high">High</span></td><td><span class="badge badge-high">Slow</span></td><td><span class="badge badge-high">$$$</span></td></tr>
+          <tr><td class="td-name">Speculative RAG</td><td>Scale + quality balance</td><td><span class="badge badge-high">High</span></td><td><span class="badge badge-low">Fast</span></td><td><span class="badge badge-med">$$</span></td></tr>
+          <tr><td class="td-name">Structured RAG</td><td>Database / tabular queries</td><td><span class="badge badge-med">Medium</span></td><td><span class="badge badge-low">Fast</span></td><td><span class="badge badge-med">$$</span></td></tr>
+          <tr><td class="td-name">Multimodal RAG</td><td>PDFs, images, mixed content</td><td><span class="badge badge-high">High</span></td><td><span class="badge badge-med">Medium</span></td><td><span class="badge badge-high">$$$</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- WHEN TO USE -->
+  <div class="decision-tree">
+    <div class="section-header">🧭 When to Use Which RAG</div>
+    <div class="dt-grid">
+      <div class="dt-card">
+        <div class="dt-question">📁 What's your data source?</div>
+        <div class="dt-answer">Unstructured text docs <span class="dt-rec">→ Dense / Hybrid</span></div>
+        <div class="dt-answer">SQL / spreadsheets <span class="dt-rec">→ Structured RAG</span></div>
+        <div class="dt-answer">Images, PDFs, charts <span class="dt-rec">→ Multimodal RAG</span></div>
+        <div class="dt-answer">Knowledge graph <span class="dt-rec">→ Graph RAG</span></div>
+      </div>
+      <div class="dt-card">
+        <div class="dt-question">❓ How complex are queries?</div>
+        <div class="dt-answer">Simple factual Q&A <span class="dt-rec">→ Naive RAG</span></div>
+        <div class="dt-answer">Need multiple facts chained <span class="dt-rec">→ Multi-Hop RAG</span></div>
+        <div class="dt-answer">Mixed simple + complex <span class="dt-rec">→ Adaptive RAG</span></div>
+        <div class="dt-answer">Open-ended research <span class="dt-rec">→ Iterative / Agentic</span></div>
+      </div>
+      <div class="dt-card">
+        <div class="dt-question">⚡ What's your priority?</div>
+        <div class="dt-answer">Speed + low cost <span class="dt-rec">→ Naive / Adaptive RAG</span></div>
+        <div class="dt-answer">Maximum accuracy <span class="dt-rec">→ Advanced / Self-RAG</span></div>
+        <div class="dt-answer">High recall coverage <span class="dt-rec">→ RAG Fusion / Hybrid</span></div>
+        <div class="dt-answer">Incomplete KB fallback <span class="dt-rec">→ CRAG</span></div>
+      </div>
+      <div class="dt-card">
+        <div class="dt-question">🔍 What retrieval issue do you have?</div>
+        <div class="dt-answer">Missing exact keywords <span class="dt-rec">→ Sparse or Hybrid</span></div>
+        <div class="dt-answer">Query-doc length mismatch <span class="dt-rec">→ HyDE</span></div>
+        <div class="dt-answer">Query too vague <span class="dt-rec">→ RAG Fusion</span></div>
+        <div class="dt-answer">Relationships between docs <span class="dt-rec">→ Graph RAG</span></div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    RAG Complete Reference · 18 Architectures Covered · Click any card to expand details
+  </footer>
+
+</div>
+
+<script>
+  function filterCards(cat) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+
+    document.querySelectorAll('.rag-card').forEach(card => {
+      if (cat === 'all' || card.dataset.cat === cat) {
+        card.classList.add('visible');
+      } else {
+        card.classList.remove('visible');
+        card.classList.remove('expanded');
+      }
+    });
+  }
+
+  function toggleCard(btn) {
+    const card = btn.closest('.rag-card');
+    card.classList.toggle('expanded');
+  }
+</script>
+</body>
+</html>
